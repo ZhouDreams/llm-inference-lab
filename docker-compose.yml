@@ -4,7 +4,7 @@ services:
     container_name: vllm
     restart: unless-stopped
     ipc: host                                 # vLLM 官方推荐，多进程靠共享内存通信
-    network_mode: host                        # AutoDL 容器内 docker 无 iptables/bridge 权限，走 host 网络；vLLM 监听宿主 127.0.0.1:8000
+    network_mode: host                        # 走 host 网络，vLLM 直接监听宿主 127.0.0.1:8000
     volumes:
       - ./models:/models:ro                   # 只读挂载权重目录
     environment:
@@ -14,7 +14,7 @@ services:
     command: >
       --model ${VLLM_MODEL:-/models/cyankiwi/Qwen3.8-27B-AWQ-INT4}
       --served-model-name qwen3.8-27b
-      --host 0.0.0.0
+      --host 127.0.0.1
       --port 8000
       --gpu-memory-utilization 0.90
       ${VLLM_EXTRA_ARGS:-}
