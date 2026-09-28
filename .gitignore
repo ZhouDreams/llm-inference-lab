@@ -1,0 +1,9 @@
+# 模型权重不入库，只保留 manifest
+models/*
+!models/manifest.json
+
+# macOS
+.DS_Store
+
+# 服务器连接信息不入库
+Connect-to-AutoDL-server.md

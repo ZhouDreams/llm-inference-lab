@@ -1,0 +1,34 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.30.0          # 钉版本；已核实支持 Qwen3_5 架构 + compressed-tensors
+    container_name: vllm
+    restart: unless-stopped
+    ipc: host                                 # vLLM 官方推荐，多进程靠共享内存通信
+    network_mode: host                        # AutoDL 容器内 docker 无 iptables/bridge 权限，走 host 网络；vLLM 监听宿主 127.0.0.1:8000
+    volumes:
+      - ./models:/models:ro                   # 只读挂载权重目录
+    environment:
+      HF_HUB_OFFLINE: "1"                     # 权重已本地化，禁止隐式联网拉模型
+      # VLLM_API_KEY: "change-me"             # 需要鉴权时取消注释
+    # VLLM_MODEL / VLLM_EXTRA_ARGS 由 scripts/start.sh 注入，也可手动 export
+    command: >
+      --model ${VLLM_MODEL:-/models/cyankiwi/Qwen3.8-27B-AWQ-INT4}
+      --served-model-name qwen3.8-27b
+      --host 0.0.0.0
+      --port 8000
+      --gpu-memory-utilization 0.90
+      ${VLLM_EXTRA_ARGS:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10m                       # 首次加载 27B 权重可能要几分钟
+      retries: 3
+    stop_grace_period: 2m
