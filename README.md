@@ -8,13 +8,16 @@
 
 ## 测试模型
 
-| 模型 | 说明 |
-| --- | --- |
-| [cyankiwi/Qwen3.8-27B-AWQ-INT4](https://huggingface.co/cyankiwi/Qwen3.8-27B-AWQ-INT4) | 4-bit AWQ 量化版（compressed-tensors），约 19.6 GiB，单张 24G 显卡可跑，主力测试对象 |
-| [Qwen/Qwen3.8-27B-FP8](https://huggingface.co/Qwen/Qwen3.8-27B-FP8) | 官方 FP8 量化版，精度损失最小的量化档 |
-| [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) | 官方全量 BF16 原版，约 51.8 GiB，对照组 |
+| 模型 | 最大输入 | 最大输出 | 说明 |
+| --- | --- | --- | --- |
+| [cyankiwi/Qwen3.8-27B-AWQ-INT4](https://huggingface.co/cyankiwi/Qwen3.8-27B-AWQ-INT4) | 262,144 | 262,144 | 4-bit AWQ 量化版（compressed-tensors），约 19.6 GiB，单张 24G 显卡可跑，主力测试对象 |
+| [Qwen/Qwen3.8-27B-FP8](https://huggingface.co/Qwen/Qwen3.8-27B-FP8) | 262,144 | 262,144 | 官方 FP8 量化版，精度损失最小的量化档 |
+| [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) | 262,144 | 262,144 | 官方全量 BF16 原版，约 51.8 GiB，对照组 |
+| [Qwen/Qwen3.6-35B-A3B-FP8](https://huggingface.co/Qwen/Qwen3.6-35B-A3B-FP8) | 262,144 | 81,920 | 35B MoE / 3B 激活（30B-A3B 后继，DeltaNet 混合注意力 + 视觉/视频），官方细粒度 FP8（block 128），约 38 GiB，A100 80G 单卡并发 / 长上下文实验 |
 
-三个模型架构均为 `Qwen3_5ForConditionalGeneration`，已在 vLLM v0.30.0 支持列表中核实。
+最大输入 / 输出为发布页标注的原生上下文长度与推荐最大输出（YaRN 扩展值不列入）；27B 系三个量化档的上下文规格与 BF16 原版一致。
+
+三个 27B 模型架构均为 `Qwen3_5ForConditionalGeneration`，35B-A3B 为 `Qwen3_5MoeForConditionalGeneration`，均已在 vLLM v0.30.0 支持列表中核实。
 
 ## manifest 格式
 
@@ -28,6 +31,8 @@
       "id": "org/name",          // 必填，Hugging Face 仓库 ID
       "revision": "main",        // 可选，默认 main
       "enabled": true,           // 可选，默认 true
+      "maxInputTokens": 262144,  // 可选，发布页标注的原生上下文长度
+      "maxOutputTokens": 262144, // 可选，发布页推荐的最大输出长度
       "note": "备注"             // 可选
     }
   ]

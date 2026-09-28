@@ -5,24 +5,32 @@
       "id": "cyankiwi/Qwen3.8-27B-AWQ-INT4",
       "revision": "main",
       "enabled": true,
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 262144,
       "note": "4-bit AWQ 量化版（compressed-tensors），社区最主流，主力测试对象"
     },
     {
       "id": "Qwen/Qwen3.8-27B",
       "revision": "main",
       "enabled": true,
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 262144,
       "note": "官方全量 BF16 原版，对照组"
     },
     {
       "id": "Qwen/Qwen3.8-27B-FP8",
       "revision": "main",
       "enabled": true,
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 262144,
       "note": "官方 FP8 量化版"
     },
     {
       "id": "Qwen/Qwen3.6-35B-A3B-FP8",
       "revision": "main",
       "enabled": true,
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 81920,
       "note": "35B MoE / 3B 激活（30B-A3B 后继，DeltaNet 混合注意力 + 视觉/视频），官方细粒度 FP8（block 128），~38G，A100 80G 单卡并发 / 长上下文实验"
     }
   ]
