@@ -127,7 +127,7 @@ nohup vllm serve models/cyankiwi/Qwen3.8-27B-AWQ-INT4 \
 
 RunPod 的 Pod 本身就是平台托管的容器：镜像由你指定、由平台运行；Pod 内不能自建 Docker daemon，也不支持 docker compose（官方文档 Limitations 明示）。平台在海外，GitHub / HuggingFace / Docker Hub 全部直连，无需任何加速通道。
 
-### 权重准备
+### AWQ：权重置于 Network Volume
 
 创建 Pod 时挂载 Network Volume（默认挂载到 `/workspace`，跨关机持久；仅 Secure Cloud 提供），SSH 进 Pod 下载权重（SSH 命令在 Pod 的 Connect 页面，公钥在账号设置中配置）：
 
@@ -137,9 +137,9 @@ huggingface-cli download cyankiwi/Qwen3.8-27B-AWQ-INT4 \
   --local-dir /workspace/models/cyankiwi/Qwen3.8-27B-AWQ-INT4
 ```
 
-Pod 根磁盘在关机后清空，权重与代码一律放 Network Volume。
+Pod 根磁盘在停止后清空；需要跨启动保留的运行时文件放在 `/workspace`。
 
-### Pod / 模板配置（Custom Template）
+### AWQ：Pod / 模板配置（Custom Template）
 
 | 项 | 值 |
 | --- | --- |
@@ -151,15 +151,50 @@ Pod 根磁盘在关机后清空，权重与代码一律放 Network Volume。
 - 容器参数与 docker-compose 的 command 一致；`--host 0.0.0.0` 与裸机路线不同——RunPod 经代理转发流量，容器需监听非回环地址
 - GPU 数量在 Pod 规格中选择，平台已注入 GPU 运行时，无需任何 nvidia 配置
 
+### FP8：模型内置镜像
+
+FP8 权重由 [docker/runpod-fp8.Dockerfile](docker/runpod-fp8.Dockerfile) 打包到 `/models/Qwen/Qwen3.8-27B-FP8`，不依赖 `/workspace` 挂载。镜像基于 `vllm/vllm-openai:v0.30.0`，以 `linux/amd64` 构建并推送到公开的 GHCR：`ghcr.io/zhoudreams/llm-inference-lab-vllm:fp8`。模型权重拆分到多个小于 10 GB 的镜像层。
+
+在仓库根目录、权重已落位 `models/Qwen/Qwen3.8-27B-FP8` 时构建：
+
+```bash
+mkdir -p /tmp/llm-inference-lab-build-context
+docker buildx build --platform linux/amd64 \
+  --build-context model=./models/Qwen/Qwen3.8-27B-FP8 \
+  --build-context app=./docker \
+  --file "$PWD/docker/runpod-fp8.Dockerfile" \
+  --tag ghcr.io/zhoudreams/llm-inference-lab-vllm:fp8 \
+  --load /tmp/llm-inference-lab-build-context
+docker push ghcr.io/zhoudreams/llm-inference-lab-vllm:fp8
+```
+
+推送需要 GHCR 的 `write:packages` 权限；公开镜像可由 RunPod 匿名拉取，无需 Registry Authentication。镜像解包后约 34 GB，Container disk 配置为 60 GB，为运行时文件留出余量；停止 Pod 后该盘清空，镜像内的权重在下次启动时随镜像恢复。
+
+| 项 | 值 |
+| --- | --- |
+| 镜像 | `ghcr.io/zhoudreams/llm-inference-lab-vllm:fp8` |
+| Container disk | 60 GB |
+| 暴露端口 | HTTP `8000` |
+| 环境变量 | 镜像内置 `HF_HUB_OFFLINE=1`；通过 RunPod Secret 注入 `VLLM_API_KEY` |
+| 容器启动参数 | 见下方命令 |
+
+```text
+--model /models/Qwen/Qwen3.8-27B-FP8 --served-model-name qwen3.8-27b-fp8 --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.90 --max-model-len 262144 --max-num-seqs 4 --enforce-eager --reasoning-parser qwen3 --enable-auto-tool-choice --tool-call-parser qwen3_xml --middleware runpod_auth.require_key
+```
+
+`runpod_auth.require_key` 定义于 [docker/runpod_auth.py](docker/runpod_auth.py)，要求除 `/health` 外的 HTTP 请求携带 `Authorization: Bearer <VLLM_API_KEY>`；未配置密钥时推理请求返回 503。
+
 ### 访问与验证
 
 服务地址为控制台 Connect 页给出的代理 URL（形如 `https://<pod-id>-8000.proxy.runpod.net`）：
 
 ```bash
 curl https://<pod-id>-8000.proxy.runpod.net/health
+curl -H "Authorization: Bearer $VLLM_API_KEY" \
+  https://<pod-id>-8000.proxy.runpod.net/v1/models
 ```
 
-也可经 SSH 隧道访问。磁盘预算同样参照「测试模型」表中的模型大小规划 Network Volume 容量。
+AWQ 路线也可经 SSH 隧道访问，Network Volume 容量参照「测试模型」表规划。FP8 镜像内置权重，无需为其单独配置模型卷。
 
 ## Docker 部署（裸金属）
 

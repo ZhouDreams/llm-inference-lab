@@ -5,5 +5,9 @@ models/*
 # macOS
 .DS_Store
 
+# ZCode 插件（video2code / video-agent-kit）会话加载时写入的运行时标记
+.v2c/
+.video_agent/
+
 # 服务器连接信息不入库
 Connect-to-AutoDL-server.md

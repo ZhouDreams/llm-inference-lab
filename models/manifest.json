@@ -18,6 +18,12 @@
       "revision": "main",
       "enabled": true,
       "note": "官方 FP8 量化版"
+    },
+    {
+      "id": "Qwen/Qwen3.6-35B-A3B-FP8",
+      "revision": "main",
+      "enabled": true,
+      "note": "35B MoE / 3B 激活（30B-A3B 后继，DeltaNet 混合注意力 + 视觉/视频），官方细粒度 FP8（block 128），~38G，A100 80G 单卡并发 / 长上下文实验"
     }
   ]
 }
